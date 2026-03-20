@@ -154,16 +154,15 @@
             console.log("Google Maps API 載入準備完成！");
         }
 
-        // 選單連動邏輯
-        window.addEventListener('DOMContentLoaded', () => {
-            for (const [lineKey, lineData] of Object.entries(mrtData)) {
-                const option = document.createElement('option');
-                option.value = lineKey;
-                option.textContent = lineData.name;
-                lineSelect.appendChild(option);
-            }
-        });
+        // 【修正點】：移除 DOMContentLoaded 等待，強制立刻畫出選單，解決 GitHub IDE 預覽空白問題
+        for (const [lineKey, lineData] of Object.entries(mrtData)) {
+            const option = document.createElement('option');
+            option.value = lineKey;
+            option.textContent = lineData.name;
+            lineSelect.appendChild(option);
+        }
 
+        // 選單連動邏輯
         lineSelect.addEventListener('change', (e) => {
             stationSelect.innerHTML = '<option value="">-- 選擇車站 --</option>';
             searchBtn.disabled = true;
@@ -211,7 +210,7 @@
             }
         });
 
-        // 核心搜尋邏輯 (加入搜尋前漏斗過濾)
+        // 核心搜尋邏輯
         searchBtn.addEventListener('click', async () => {
             currentStation = JSON.parse(stationSelect.value);
             const radiusParam = parseInt(radiusSelect.value);
@@ -231,7 +230,7 @@
                     fields: ['displayName', 'rating', 'userRatingCount', 'id', 'location'],
                     locationRestriction: {
                         center: { lat: currentStation.lat, lng: currentStation.lng },
-                        radius: radiusParam, // 使用者設定的步行距離
+                        radius: radiusParam, 
                     },
                     includedPrimaryTypes: ['restaurant'],
                 };
@@ -241,11 +240,10 @@
                 if (places && places.length > 0) {
                     const stationLatLng = new google.maps.LatLng(currentStation.lat, currentStation.lng);
                     
-                    // 【節省成本的漏斗過濾】：在這裡就把低分、少評論的店刷掉，不讓它們進入第二階段
                     const basePlaces = places.filter(p => {
                         return p.rating && p.rating >= minRatingParam && 
                                p.userRatingCount && p.userRatingCount >= minReviewsParam;
-                    }).slice(0, 10); // 確保最多只查 10 家的詳情
+                    }).slice(0, 10); 
 
                     if (basePlaces.length === 0) {
                         statusMessage.innerHTML = `周邊沒有符合條件 (評分 ${minRatingParam}+, 評論 ${minReviewsParam}+) 的餐廳 😢<br><span class="text-xs text-gray-400">試著擴大步行距離或降低標準看看</span>`;
@@ -263,13 +261,16 @@
                             const details = await Place.getDetails(requestDetails);
                             const distance = spherical.computeDistanceBetween(stationLatLng, place.location);
                             
+                            // 【修正點】：使用 Google 官方標準導航網址格式，確保手機完美開啟 App 導航
+                            const officialMapUrl = `https://www.google.com/maps/search/?api=1&query=${place.location.lat()},${place.location.lng()}&query_place_id=${place.id}`;
+
                             return {
                                 name: place.displayName ? place.displayName.text : '未知餐廳',
                                 rating: place.rating,
                                 reviews: place.userRatingCount,
                                 isKidsFriendly: details.goodForChildren === true,
                                 distance: Math.round(distance), 
-                                url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.displayName ? place.displayName.text : '')}&query_place_id=${place.id}&ll=${place.location.lat()},${place.location.lng()}`,
+                                url: officialMapUrl,
                                 location: place.location
                             };
                         } catch (detailError) {
@@ -331,4 +332,41 @@
                             <p class="text-[11px] text-gray-500 mt-0.5">⭐ <span class="text-gray-700 font-medium">${place.rating}</span> <span class="text-gray-400">(${place.reviews} 則評論)</span></p>
                             ${badgeHTML}
                         </div>
-                        <div class="w-1/4 text-right flex flex-col justify
+                        <div class="w-1/4 text-right flex flex-col justify-between items-end h-full">
+                            <span class="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded">📍 ${place.distance}m</span>
+                            <span class="text-[10px] text-gray-400 mt-2 whitespace-nowrap">點擊看簡介 ↗</span>
+                        </div>
+                    `;
+                    resultsList.appendChild(li);
+                });
+            }
+
+            if (map && mapLoaded) renderMapMarkers(displayPlaces);
+        }
+
+        async function renderMapMarkers(placesToRender = fetchedPlaces) {
+            if(!map) return;
+            const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+            
+            markers.forEach(m => m.map = null);
+            markers = [];
+
+            placesToRender.forEach(place => {
+                const marker = new AdvancedMarkerElement({
+                    map: map,
+                    position: place.location,
+                    title: place.name,
+                });
+                
+                marker.addListener('click', () => {
+                    window.open(place.url, '_blank');
+                });
+                markers.push(marker);
+            });
+        }
+    </script>
+
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBYHMT53Z_gdmseYHxqdIBrlE_4qouMDzM&v=weekly&libraries=places,geometry,marker&callback=initMap"></script>
+
+</body>
+</html>
