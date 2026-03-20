@@ -160,18 +160,22 @@
 
                     resultsContainer.classList.remove('hidden');
                     
+                    // 把抓到的資料變成網頁上的清單
                     topResults.forEach(place => {
                         const li = document.createElement('li');
                         li.className = 'p-3 bg-orange-50 rounded-lg border border-orange-100 flex justify-between items-center';
                         
-                        // 新版 API 抓取名稱的方式變成 place.displayName.text
+                        // 修正 1：店名抓取方式改為 place.displayName
+                        const restaurantName = place.displayName || '未知餐廳名稱';
+                        
+                        // 修正 2：按鈕文字改為更直覺的「檢查高腳椅」，並清楚說明下一步的動作
                         li.innerHTML = `
-                            <div>
-                                <h3 class="font-bold text-gray-800">${place.displayName.text}</h3>
+                            <div class="w-2/3 pr-2">
+                                <h3 class="font-bold text-gray-800 text-sm truncate" title="${restaurantName}">${restaurantName}</h3>
                                 <p class="text-xs text-gray-500 mt-1">⭐ ${place.rating} (${place.userRatingCount} 則評論)</p>
                             </div>
-                            <button onclick="alert('準備開發：即將掃描這家餐廳的設施與評論是否有高腳椅！')" class="text-xs bg-white border border-orange-300 text-orange-600 py-1 px-2 rounded hover:bg-orange-100 shadow-sm">
-                                👶 掃描
+                            <button onclick="alert('下一步開發：我們會讓程式自動去翻找【${restaurantName}】的網友評論，尋找有沒有人提到「高腳椅」、「兒童椅」或「親子友善」！')" class="w-1/3 text-xs bg-white border border-orange-400 text-orange-600 py-2 px-1 rounded-md hover:bg-orange-100 shadow-sm font-medium transition-colors">
+                                👶 檢查高腳椅
                             </button>
                         `;
                         resultsList.appendChild(li);
