@@ -56,7 +56,7 @@
                 <div class="flex items-center">
                     <input type="checkbox" id="stroller-filter" class="w-4 h-4 text-orange-500 rounded border-gray-300 focus:ring-orange-500">
                     <label for="stroller-filter" class="ml-2 text-sm font-medium text-gray-700 cursor-pointer">
-                        只顯示有「🦽 推車友善 (無階梯)」的店家
+                        只顯示有「🦽 推車友善」的店家
                     </label>
                 </div>
             </div>
@@ -189,8 +189,8 @@
                 const { spherical } = await google.maps.importLibrary("geometry"); 
 
                 const request = {
-                    // 修改：移除會報錯的 goodForChildren，改為抓取 accessibilityOptions (無障礙選項)
-                    fields: ['displayName', 'rating', 'userRatingCount', 'id', 'location', 'accessibilityOptions', 'googleMapsUri'],
+                    // 【修復點】：移除了 googleMapsUri 欄位要求，以免 Google 報錯 Unknown fields requested
+                    fields: ['displayName', 'rating', 'userRatingCount', 'id', 'location', 'accessibilityOptions'],
                     locationRestriction: {
                         center: { lat: currentStation.lat, lng: currentStation.lng },
                         radius: 800, 
@@ -208,17 +208,19 @@
                         .map(p => {
                             const distance = spherical.computeDistanceBetween(stationLatLng, p.location);
                             
-                            // 判斷是否為推車友善 (有無障礙入口)
                             let isStrollerFriendly = false;
                             if (p.accessibilityOptions && p.accessibilityOptions.wheelchairAccessibleEntrance === true) {
                                 isStrollerFriendly = true;
                             }
 
-                            // 處理備用導航連結
-                            const navUrl = p.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${p.location.lat()},${p.location.lng()}&query_place_id=${p.id}`;
+                            // 【修復點】：既然抓不到 googleMapsUri，我們手動拼接一個通用搜尋連結。
+                            // 格式：搜尋 該餐廳名字 + 該餐廳座標 (確保精準定位)
+                            const rName = p.displayName ? p.displayName.text : '未知餐廳';
+                            const encodedName = encodeURIComponent(rName);
+                            const navUrl = `https://www.google.com/maps/search/?api=1&query=${encodedName}&ll=${p.location.lat()},${p.location.lng()}&query_place_id=${p.id}`;
 
                             return {
-                                name: p.displayName ? p.displayName.text : '未知餐廳',
+                                name: rName,
                                 rating: p.rating,
                                 reviews: p.userRatingCount,
                                 isStrollerFriendly: isStrollerFriendly,
@@ -239,7 +241,12 @@
 
             } catch (error) {
                 console.error("API 錯誤:", error);
-                statusMessage.innerHTML = `<span class="text-red-500">搜尋失敗，請檢查 Console: ${error.message}</span>`;
+                // 提供更直觀的報錯提示給用戶
+                if (error.message && error.message.includes('googleMapsUri')) {
+                    statusMessage.innerHTML = `<span class="text-red-500">Google API 限制：無法批量獲取導航連結。已移除該要求。請重新搜尋一次試試看。</span>`;
+                } else {
+                    statusMessage.innerHTML = `<span class="text-red-500">搜尋失敗，請檢查 API Key 是否受限： ${error.message}</span>`;
+                }
             }
         });
 
