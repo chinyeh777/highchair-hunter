@@ -15,29 +15,57 @@
 
     <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md h-fit">
         
-        <div class="text-center mb-6">
+        <div class="text-center mb-4">
             <h1 class="text-2xl font-bold text-gray-800 mb-2">👶 高腳椅獵人</h1>
-            <p class="text-xs text-gray-500">不再踩雷！尋找捷運站周邊 800m 推車友善去處</p>
+            <p class="text-xs text-gray-500">不再踩雷！精準篩選捷運站周邊親子餐廳</p>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
             <div class="flex space-x-2">
                 <div class="w-1/2">
-                    <label class="block text-xs font-medium text-gray-700 mb-1">路線</label>
-                    <select id="line-select" class="w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-700 focus:ring-2 focus:ring-orange-500">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">捷運路線</label>
+                    <select id="line-select" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-orange-500 bg-white">
                         <option value="">-- 請選擇 --</option>
                     </select>
                 </div>
                 <div class="w-1/2">
-                    <label class="block text-xs font-medium text-gray-700 mb-1">車站</label>
-                    <select id="station-select" class="w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-700 focus:ring-2 focus:ring-orange-500" disabled>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">目標車站</label>
+                    <select id="station-select" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-orange-500 bg-white" disabled>
                         <option value="">-- 選擇車站 --</option>
                     </select>
                 </div>
             </div>
 
-            <button id="search-btn" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed" disabled>
-                🔍 尋找周邊餐廳
+            <div class="grid grid-cols-3 gap-2 pt-2 border-t border-gray-200">
+                <div>
+                    <label class="block text-[10px] font-medium text-gray-500 mb-1">步行距離</label>
+                    <select id="radius-select" class="w-full border border-gray-300 rounded p-1.5 text-xs bg-white">
+                        <option value="400">約 5 分鐘</option>
+                        <option value="800" selected>約 10 分鐘</option>
+                        <option value="1200">約 15 分鐘</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-medium text-gray-500 mb-1">最低評分</label>
+                    <select id="min-rating-select" class="w-full border border-gray-300 rounded p-1.5 text-xs bg-white">
+                        <option value="3.8">3.8 星以上</option>
+                        <option value="4.0" selected>4.0 星以上</option>
+                        <option value="4.2">4.2 星以上</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-medium text-gray-500 mb-1">最少評論數</label>
+                    <select id="min-reviews-select" class="w-full border border-gray-300 rounded p-1.5 text-xs bg-white">
+                        <option value="10">10+ (極限)</option>
+                        <option value="50" selected>50+ (推薦)</option>
+                        <option value="100">100+ (老店)</option>
+                        <option value="500">500+ (熱門)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button id="search-btn" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed mt-2" disabled>
+                🔍 尋找達標餐廳
             </button>
         </div>
 
@@ -47,16 +75,16 @@
             
             <div class="bg-orange-50 p-3 rounded-lg border border-orange-100 mb-4 space-y-3">
                 <div class="flex justify-between items-center">
-                    <label class="text-sm font-medium text-gray-700">排序方式：</label>
-                    <select id="sort-select" class="border border-gray-300 rounded text-sm p-1 text-gray-700 focus:outline-none">
+                    <label class="text-sm font-medium text-gray-700">清單排序：</label>
+                    <select id="sort-select" class="border border-gray-300 rounded text-sm p-1 text-gray-700 focus:outline-none bg-white">
                         <option value="distance">📍 距離 (近到遠)</option>
                         <option value="rating">⭐ 評分 (高到低)</option>
                     </select>
                 </div>
                 <div class="flex items-center">
-                    <input type="checkbox" id="stroller-filter" class="w-4 h-4 text-orange-500 rounded border-gray-300 focus:ring-orange-500">
-                    <label for="stroller-filter" class="ml-2 text-sm font-medium text-gray-700 cursor-pointer">
-                        只顯示有「🦽 推車友善」的店家
+                    <input type="checkbox" id="kids-filter" class="w-4 h-4 text-orange-500 rounded border-gray-300 focus:ring-orange-500">
+                    <label for="kids-filter" class="ml-2 text-sm font-medium text-gray-700 cursor-pointer">
+                        只看「👶 Google 認證適合兒童」店家
                     </label>
                 </div>
             </div>
@@ -66,13 +94,13 @@
                 <button id="tab-map" class="w-1/2 py-2 text-center text-sm font-medium text-gray-500 hover:text-gray-700">🗺️ 地圖模式</button>
             </div>
 
-            <div id="view-list" class="max-h-96 overflow-y-auto no-scrollbar pb-2">
+            <div id="view-list" class="max-h-[400px] overflow-y-auto no-scrollbar pb-2">
                 <ul id="results-list" class="space-y-3"></ul>
             </div>
 
             <div id="view-map" class="hidden">
-                <div id="map-container" class="w-full h-80 rounded-lg shadow-inner border border-gray-200"></div>
-                <p class="text-xs text-gray-400 text-center mt-2">點擊地圖上的標記可開啟 Google Maps 導航</p>
+                <div id="map-container" class="w-full h-80 rounded-lg shadow-inner border border-gray-200 bg-gray-100"></div>
+                <p class="text-[10px] text-gray-400 text-center mt-2">點擊地圖上的標記可開啟 Google Maps 導航</p>
             </div>
             
         </div>
@@ -99,12 +127,16 @@
 
         const lineSelect = document.getElementById('line-select');
         const stationSelect = document.getElementById('station-select');
+        const radiusSelect = document.getElementById('radius-select');
+        const minRatingSelect = document.getElementById('min-rating-select');
+        const minReviewsSelect = document.getElementById('min-reviews-select');
+        
         const searchBtn = document.getElementById('search-btn');
         const statusMessage = document.getElementById('status-message');
         const resultsSection = document.getElementById('results-section');
         const resultsList = document.getElementById('results-list');
         const sortSelect = document.getElementById('sort-select');
-        const strollerFilter = document.getElementById('stroller-filter');
+        const kidsFilter = document.getElementById('kids-filter');
         
         const tabList = document.getElementById('tab-list');
         const tabMap = document.getElementById('tab-map');
@@ -116,6 +148,7 @@
         let currentStation = null;
         let map;
         let markers = [];
+        let mapLoaded = false;
 
         async function initMap() {
             console.log("Google Maps API 載入準備完成！");
@@ -151,7 +184,7 @@
             searchBtn.disabled = !e.target.value;
         });
 
-        // 視圖切換邏輯
+        // 視圖切換
         tabList.addEventListener('click', () => {
             tabList.className = "w-1/2 py-2 text-center text-sm font-bold text-orange-600 border-b-2 border-orange-500";
             tabMap.className = "w-1/2 py-2 text-center text-sm font-medium text-gray-500 hover:text-gray-700 border-b border-transparent";
@@ -165,99 +198,111 @@
             viewMap.classList.remove('hidden');
             viewList.classList.add('hidden');
             
-            if (!map && currentStation) {
+            if (!mapLoaded && currentStation) {
                 const { Map } = await google.maps.importLibrary("maps");
+                mapContainer.style.height = '320px'; 
                 map = new Map(mapContainer, {
                     center: { lat: currentStation.lat, lng: currentStation.lng },
                     zoom: 15,
                     mapId: "DEMO_MAP_ID",
                 });
                 renderMapMarkers();
+                mapLoaded = true;
             }
         });
 
-        // 核心搜尋邏輯
+        // 核心搜尋邏輯 (加入搜尋前漏斗過濾)
         searchBtn.addEventListener('click', async () => {
             currentStation = JSON.parse(stationSelect.value);
+            const radiusParam = parseInt(radiusSelect.value);
+            const minRatingParam = parseFloat(minRatingSelect.value);
+            const minReviewsParam = parseInt(minReviewsSelect.value);
+
             statusMessage.classList.remove('hidden');
-            statusMessage.innerHTML = `<span class="animate-pulse">正在搜尋 <b>${currentStation.name}</b> 周圍 800m 的餐廳...</span>`;
+            statusMessage.innerHTML = `<span class="animate-pulse">正在廣搜 <b>${currentStation.name}</b> 周圍 ${radiusParam}m 的餐廳...</span>`;
             resultsSection.classList.add('hidden');
-            if(map) map = null; 
+            mapLoaded = false; 
 
             try {
                 const { Place } = await google.maps.importLibrary("places");
                 const { spherical } = await google.maps.importLibrary("geometry"); 
 
-                const request = {
-                    // 【修復點】：移除了 googleMapsUri 欄位要求，以免 Google 報錯 Unknown fields requested
-                    fields: ['displayName', 'rating', 'userRatingCount', 'id', 'location', 'accessibilityOptions'],
+                const searchRequest = {
+                    fields: ['displayName', 'rating', 'userRatingCount', 'id', 'location'],
                     locationRestriction: {
                         center: { lat: currentStation.lat, lng: currentStation.lng },
-                        radius: 800, 
+                        radius: radiusParam, // 使用者設定的步行距離
                     },
                     includedPrimaryTypes: ['restaurant'],
                 };
 
-                const { places } = await Place.searchNearby(request);
+                const { places } = await Place.searchNearby(searchRequest);
 
                 if (places && places.length > 0) {
                     const stationLatLng = new google.maps.LatLng(currentStation.lat, currentStation.lng);
                     
-                    fetchedPlaces = places
-                        .filter(p => p.rating && p.rating >= 3.8) 
-                        .map(p => {
-                            const distance = spherical.computeDistanceBetween(stationLatLng, p.location);
-                            
-                            let isStrollerFriendly = false;
-                            if (p.accessibilityOptions && p.accessibilityOptions.wheelchairAccessibleEntrance === true) {
-                                isStrollerFriendly = true;
-                            }
+                    // 【節省成本的漏斗過濾】：在這裡就把低分、少評論的店刷掉，不讓它們進入第二階段
+                    const basePlaces = places.filter(p => {
+                        return p.rating && p.rating >= minRatingParam && 
+                               p.userRatingCount && p.userRatingCount >= minReviewsParam;
+                    }).slice(0, 10); // 確保最多只查 10 家的詳情
 
-                            // 【修復點】：既然抓不到 googleMapsUri，我們手動拼接一個通用搜尋連結。
-                            // 格式：搜尋 該餐廳名字 + 該餐廳座標 (確保精準定位)
-                            const rName = p.displayName ? p.displayName.text : '未知餐廳';
-                            const encodedName = encodeURIComponent(rName);
-                            const navUrl = `https://www.google.com/maps/search/?api=1&query=${encodedName}&ll=${p.location.lat()},${p.location.lng()}&query_place_id=${p.id}`;
+                    if (basePlaces.length === 0) {
+                        statusMessage.innerHTML = `周邊沒有符合條件 (評分 ${minRatingParam}+, 評論 ${minReviewsParam}+) 的餐廳 😢<br><span class="text-xs text-gray-400">試著擴大步行距離或降低標準看看</span>`;
+                        return;
+                    }
 
-                            return {
-                                name: rName,
-                                rating: p.rating,
-                                reviews: p.userRatingCount,
-                                isStrollerFriendly: isStrollerFriendly,
-                                distance: Math.round(distance), 
-                                url: navUrl,
-                                location: p.location
+                    statusMessage.innerHTML = `<span class="animate-pulse">初步篩選出 ${basePlaces.length} 家優質餐廳，正在向 Google 確認兒童設施...</span>`;
+
+                    const detailsPromises = basePlaces.map(async (place) => {
+                        try {
+                            const requestDetails = {
+                                fields: ['goodForChildren'], 
+                                id: place.id
                             };
-                        });
+                            const details = await Place.getDetails(requestDetails);
+                            const distance = spherical.computeDistanceBetween(stationLatLng, place.location);
+                            
+                            return {
+                                name: place.displayName ? place.displayName.text : '未知餐廳',
+                                rating: place.rating,
+                                reviews: place.userRatingCount,
+                                isKidsFriendly: details.goodForChildren === true,
+                                distance: Math.round(distance), 
+                                url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.displayName ? place.displayName.text : '')}&query_place_id=${place.id}&ll=${place.location.lat()},${place.location.lng()}`,
+                                location: place.location
+                            };
+                        } catch (detailError) {
+                            console.error(`無法獲取店家詳情:`, detailError);
+                            return null;
+                        }
+                    });
+
+                    fetchedPlaces = (await Promise.all(detailsPromises)).filter(p => p !== null);
 
                     statusMessage.classList.add('hidden');
                     resultsSection.classList.remove('hidden');
                     
-                    tabList.click();
+                    tabList.click(); 
                     updateUI(); 
                 } else {
-                    statusMessage.innerHTML = '周邊沒有找到合適的餐廳 😢';
+                    statusMessage.innerHTML = '周邊沒有找到任何餐廳 😢';
                 }
 
             } catch (error) {
                 console.error("API 錯誤:", error);
-                // 提供更直觀的報錯提示給用戶
-                if (error.message && error.message.includes('googleMapsUri')) {
-                    statusMessage.innerHTML = `<span class="text-red-500">Google API 限制：無法批量獲取導航連結。已移除該要求。請重新搜尋一次試試看。</span>`;
-                } else {
-                    statusMessage.innerHTML = `<span class="text-red-500">搜尋失敗，請檢查 API Key 是否受限： ${error.message}</span>`;
-                }
+                statusMessage.innerHTML = `<span class="text-red-500">搜尋失敗，請檢查網路或 API 狀態。</span>`;
             }
         });
 
         sortSelect.addEventListener('change', updateUI);
-        strollerFilter.addEventListener('change', updateUI);
+        kidsFilter.addEventListener('change', updateUI);
 
         function updateUI() {
             let displayPlaces = fetchedPlaces;
             
-            if (strollerFilter.checked) {
-                displayPlaces = displayPlaces.filter(p => p.isStrollerFriendly);
+            if (kidsFilter.checked) {
+                displayPlaces = displayPlaces.filter(p => p.isKidsFriendly);
             }
 
             const sortMode = sortSelect.value;
@@ -269,57 +314,21 @@
 
             resultsList.innerHTML = '';
             if (displayPlaces.length === 0) {
-                resultsList.innerHTML = '<li class="text-center text-gray-500 py-4">沒有符合條件的餐廳。</li>';
+                resultsList.innerHTML = '<li class="text-center text-gray-500 py-4 border border-dashed rounded-lg bg-gray-50">沒有符合條件的餐廳。<br><span class="text-[10px] mt-1 block">請嘗試關閉篩選器，或放寬搜尋條件。</span></li>';
             } else {
                 displayPlaces.forEach(place => {
                     const li = document.createElement('li');
-                    li.className = 'p-3 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition cursor-pointer flex justify-between items-start';
+                    li.className = 'p-3 bg-white rounded-lg border border-gray-200 shadow-sm hover:border-orange-300 transition cursor-pointer flex justify-between items-start';
                     li.onclick = () => window.open(place.url, '_blank');
                     
-                    const badgeHTML = place.isStrollerFriendly 
-                        ? `<span class="inline-block mt-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">🦽 推車友善 (無階梯)</span>` 
-                        : `<span class="inline-block mt-1 text-xs text-gray-400">未標記無障礙設施</span>`;
+                    const badgeHTML = place.isKidsFriendly 
+                        ? `<span class="inline-block mt-1.5 text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold">👶 適合兒童 (Google 認證)</span>` 
+                        : `<span class="inline-block mt-1.5 text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">未標記兒童設施</span>`;
 
                     li.innerHTML = `
-                        <div class="w-3/4 pr-2">
-                            <h3 class="font-bold text-gray-800 text-[15px] truncate">${place.name}</h3>
-                            <p class="text-xs text-gray-500 mt-1">⭐ ${place.rating} (${place.reviews})</p>
+                        <div class="w-3/4 pr-2 overflow-hidden">
+                            <h3 class="font-bold text-gray-800 text-[15px] truncate" title="${place.name}">${place.name}</h3>
+                            <p class="text-[11px] text-gray-500 mt-0.5">⭐ <span class="text-gray-700 font-medium">${place.rating}</span> <span class="text-gray-400">(${place.reviews} 則評論)</span></p>
                             ${badgeHTML}
                         </div>
-                        <div class="w-1/4 text-right flex flex-col justify-between items-end h-full">
-                            <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">📍 ${place.distance}m</span>
-                            <span class="text-[10px] text-gray-400 mt-2">點擊導航 ↗</span>
-                        </div>
-                    `;
-                    resultsList.appendChild(li);
-                });
-            }
-
-            if (map) renderMapMarkers(displayPlaces);
-        }
-
-        async function renderMapMarkers(placesToRender = fetchedPlaces) {
-            const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
-            
-            markers.forEach(m => m.map = null);
-            markers = [];
-
-            placesToRender.forEach(place => {
-                const marker = new AdvancedMarkerElement({
-                    map: map,
-                    position: place.location,
-                    title: place.name,
-                });
-                
-                marker.addListener('click', () => {
-                    window.open(place.url, '_blank');
-                });
-                markers.push(marker);
-            });
-        }
-    </script>
-
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBYHMT53Z_gdmseYHxqdIBrlE_4qouMDzM&v=weekly&libraries=places,geometry,marker&callback=initMap"></script>
-
-</body>
-</html>
+                        <div class="w-1/4 text-right flex flex-col justify
