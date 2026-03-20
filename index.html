@@ -72,7 +72,6 @@
         <div id="status-message" class="mt-4 text-center text-sm text-gray-600 hidden"></div>
         
         <div id="results-section" class="mt-6 hidden">
-            
             <div class="bg-orange-50 p-3 rounded-lg border border-orange-100 mb-4 space-y-3">
                 <div class="flex justify-between items-center">
                     <label class="text-sm font-medium text-gray-700">清單排序：</label>
@@ -151,10 +150,9 @@
         let mapLoaded = false;
 
         async function initMap() {
-            console.log("Google Maps API 載入準備完成！");
+            console.log("Google Maps API 載入完成！");
         }
 
-        // 【修正點】：移除 DOMContentLoaded 等待，強制立刻畫出選單，解決 GitHub IDE 預覽空白問題
         for (const [lineKey, lineData] of Object.entries(mrtData)) {
             const option = document.createElement('option');
             option.value = lineKey;
@@ -162,7 +160,6 @@
             lineSelect.appendChild(option);
         }
 
-        // 選單連動邏輯
         lineSelect.addEventListener('change', (e) => {
             stationSelect.innerHTML = '<option value="">-- 選擇車站 --</option>';
             searchBtn.disabled = true;
@@ -183,7 +180,6 @@
             searchBtn.disabled = !e.target.value;
         });
 
-        // 視圖切換
         tabList.addEventListener('click', () => {
             tabList.className = "w-1/2 py-2 text-center text-sm font-bold text-orange-600 border-b-2 border-orange-500";
             tabMap.className = "w-1/2 py-2 text-center text-sm font-medium text-gray-500 hover:text-gray-700 border-b border-transparent";
@@ -213,7 +209,7 @@
         // 核心搜尋邏輯
         searchBtn.addEventListener('click', async () => {
             currentStation = JSON.parse(stationSelect.value);
-            const radiusParam = parseInt(radiusSelect.value);
+            const radiusParam = Number(radiusSelect.value);
             const minRatingParam = parseFloat(minRatingSelect.value);
             const minReviewsParam = parseInt(minReviewsSelect.value);
 
@@ -254,27 +250,25 @@
 
                     const detailsPromises = basePlaces.map(async (place) => {
                         try {
-                            const requestDetails = {
-                                fields: ['goodForChildren'], 
-                                id: place.id
-                            };
-                            const details = await Place.getDetails(requestDetails);
+                            // 【修正點】：使用新版正確的語法 fetchFields
+                            await place.fetchFields({ fields: ['goodForChildren'] });
+                            
                             const distance = spherical.computeDistanceBetween(stationLatLng, place.location);
                             
-                            // 【修正點】：使用 Google 官方標準導航網址格式，確保手機完美開啟 App 導航
+                            // 【修正點】：使用最標準的 Google Maps Universal Link
                             const officialMapUrl = `https://www.google.com/maps/search/?api=1&query=${place.location.lat()},${place.location.lng()}&query_place_id=${place.id}`;
 
                             return {
                                 name: place.displayName ? place.displayName.text : '未知餐廳',
                                 rating: place.rating,
                                 reviews: place.userRatingCount,
-                                isKidsFriendly: details.goodForChildren === true,
+                                isKidsFriendly: place.goodForChildren === true,
                                 distance: Math.round(distance), 
                                 url: officialMapUrl,
                                 location: place.location
                             };
                         } catch (detailError) {
-                            console.error(`無法獲取店家詳情:`, detailError);
+                            console.error(`獲取店家詳情失敗:`, detailError);
                             return null;
                         }
                     });
@@ -292,7 +286,7 @@
 
             } catch (error) {
                 console.error("API 錯誤:", error);
-                statusMessage.innerHTML = `<span class="text-red-500">搜尋失敗，請檢查網路或 API 狀態。</span>`;
+                statusMessage.innerHTML = `<span class="text-red-500">搜尋失敗！請確認您的新 API 金鑰已在後台啟用「Maps JavaScript API」。</span>`;
             }
         });
 
