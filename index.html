@@ -28,6 +28,8 @@
                     <label class="block text-xs font-bold text-gray-700 mb-1">捷運路線</label>
                     <select id="line-select" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-orange-500 bg-white">
                         <option value="">-- 請選擇 --</option>
+                        <option value="O_line">橘線 (中和新蘆線)</option>
+                        <option value="BL_line">藍線 (板南線)</option>
                     </select>
                 </div>
                 <div class="w-1/2">
@@ -170,32 +172,15 @@
         let mapLoaded = false;
         let infoWindow; 
 
-        // 【終極修復】：雙重保險選單載入機制，確保 GitHub IDE 絕對不會漏接
-        function initDropdowns() {
-            if (lineSelect.options.length > 1) return; // 避免重複加入
-            for (const [lineKey, lineData] of Object.entries(mrtData)) {
-                const option = document.createElement('option');
-                option.value = lineKey;
-                option.textContent = lineData.name;
-                lineSelect.appendChild(option);
-            }
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initDropdowns);
-        } else {
-            initDropdowns();
-        }
-
         async function initMap() {
             console.log("Google Maps API 載入成功！");
         }
 
-        // 選單連動邏輯
+        // 綁定連動邏輯
         lineSelect.addEventListener('change', (e) => {
             stationSelect.innerHTML = '<option value="">-- 選擇車站 --</option>';
             searchBtn.disabled = true;
-            if (e.target.value) {
+            if (e.target.value && mrtData[e.target.value]) {
                 stationSelect.disabled = false;
                 mrtData[e.target.value].stations.forEach(station => {
                     const option = document.createElement('option');
@@ -300,7 +285,6 @@
                         const distance = spherical.computeDistanceBetween(stationLatLng, place.location);
                         
                         const safeName = place.displayName?.text || '未知餐廳';
-                        // 【終極修復】：使用 Google 官方 Universal Search 網址，手機 100% 導向正確店家
                         const officialMapUrl = `https://www.google.com/maps/search/?api=1&query=${place.location.lat()},${place.location.lng()}&query_place_id=${place.id}`;
 
                         return {
@@ -366,4 +350,86 @@
             const nextBatch = filteredAndSortedPlaces.slice(displayIndex, displayIndex + PAGE_SIZE);
             
             nextBatch.forEach(place => {
-                currentlyDisplayedPlaces.push(place
+                currentlyDisplayedPlaces.push(place); 
+                
+                const li = document.createElement('li');
+                li.className = 'p-3 bg-white rounded-lg border border-gray-200 shadow-sm hover:border-orange-300 transition cursor-pointer flex justify-between items-start';
+                li.onclick = () => window.open(place.url, '_blank');
+                
+                const badgeHTML = place.isKidsFriendly 
+                    ? `<span class="inline-block mt-1.5 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">👶 適合兒童 / 兒童餐</span>` 
+                    : `<span class="inline-block mt-1.5 text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">未標記兒童設施</span>`;
+
+                li.innerHTML = `
+                    <div class="w-3/4 pr-2 overflow-hidden">
+                        <h3 class="font-bold text-gray-800 text-[15px] truncate" title="${place.name}">${place.name}</h3>
+                        <p class="text-[11px] text-gray-500 mt-0.5">⭐ <span class="text-gray-700 font-medium">${place.rating}</span> <span class="text-gray-400">(${place.reviews} 則評論)</span></p>
+                        ${badgeHTML}
+                    </div>
+                    <div class="w-1/4 text-right flex flex-col justify-between items-end h-full">
+                        <span class="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded">📍 ${place.distance}m</span>
+                        <span class="text-[10px] text-gray-400 mt-2 whitespace-nowrap">點擊導航 ↗</span>
+                    </div>
+                `;
+                resultsList.appendChild(li);
+            });
+
+            displayIndex += nextBatch.length;
+
+            if (displayIndex >= filteredAndSortedPlaces.length) {
+                loadMoreBtn.classList.add('hidden');
+                noMoreText.classList.remove('hidden');
+            } else {
+                loadMoreBtn.classList.remove('hidden');
+                noMoreText.classList.add('hidden');
+            }
+
+            if (map && mapLoaded) renderMapMarkers(currentlyDisplayedPlaces);
+        }
+
+        loadMoreBtn.addEventListener('click', renderNextPage);
+
+        async function renderMapMarkers(placesToRender) {
+            if(!map) return;
+            const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+            
+            markers.forEach(m => m.map = null);
+            markers = [];
+
+            placesToRender.forEach(place => {
+                const marker = new AdvancedMarkerElement({
+                    map: map,
+                    position: place.location,
+                    title: place.name,
+                });
+                
+                marker.addListener('click', () => {
+                    const badge = place.isKidsFriendly ? `<span class="text-[10px] text-green-600 font-bold block mt-1">👶 適合兒童</span>` : '';
+                    const contentString = `
+                        <div class="p-1 max-w-[200px]">
+                            <h3 class="font-bold text-sm text-gray-800 mb-1 leading-tight">${place.name}</h3>
+                            <p class="text-[11px] text-gray-600">⭐ ${place.rating} (${place.reviews})</p>
+                            ${badge}
+                            <a href="${place.url}" target="_blank" class="mt-2 block w-full text-center bg-blue-500 text-white text-xs py-1.5 rounded shadow-sm hover:bg-blue-600 transition">
+                                在 Google Maps 開啟
+                            </a>
+                        </div>
+                    `;
+                    
+                    if(infoWindow) infoWindow.close();
+                    
+                    const infoDiv = document.createElement('div');
+                    infoDiv.innerHTML = contentString;
+                    infoWindow.setContent(infoDiv);
+                    infoWindow.open(map, marker);
+                });
+                
+                markers.push(marker);
+            });
+        }
+    </script>
+
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBYHMT53Z_gdmseYHxqdIBrlE_4qouMDzM&v=weekly&libraries=places,geometry,marker&callback=initMap"></script>
+
+</body>
+</html>
