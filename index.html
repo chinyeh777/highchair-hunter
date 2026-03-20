@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👶 親子友善餐廳雷達</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 稍微美化一下下拉選單的箭頭 */
+        select { appearance: auto; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex justify-center pt-10 px-4">
+
+    <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md h-fit">
+        
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">👶 親子友善餐廳雷達</h1>
+            <p class="text-sm text-gray-500">不再踩雷！尋找捷運站周邊 800m 有高腳椅的好去處</p>
+        </div>
+
+        <div class="space-y-4">
+            
+            <div>
+                <label for="line-select" class="block text-sm font-medium text-gray-700 mb-1">1. 選擇捷運路線</label>
+                <select id="line-select" class="w-full border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    <option value="">-- 請選擇路線 --</option>
+                    </select>
+            </div>
+
+            <div>
+                <label for="station-select" class="block text-sm font-medium text-gray-700 mb-1">2. 選擇捷運站</label>
+                <select id="station-select" class="w-full border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500" disabled>
+                    <option value="">-- 請先選擇路線 --</option>
+                    </select>
+            </div>
+
+            <button id="search-btn" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 mt-4 shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                🔍 尋找周邊餐廳
+            </button>
+
+        </div>
+
+        <div id="status-message" class="mt-6 text-center text-sm text-gray-600 hidden">
+            </div>
+
+    </div>
+
+    <script>
+        // 【PM 準備的測試資料庫】
+        // 我們先放入中和新蘆線（新莊段）和板南線作為測試，確認選單連動邏輯。
+        const mrtData = {
+            "O_line": { 
+                name: "橘線 (中和新蘆線)",
+                stations: [
+                    { id: "O18", name: "新莊站", lat: 25.0361, lng: 121.4526 },
+                    { id: "O17", name: "頭前庄站", lat: 25.0398, lng: 121.4601 },
+                    { id: "O19", name: "輔大站", lat: 25.0327, lng: 121.4354 }
+                ]
+            },
+            "BL_line": { 
+                name: "藍線 (板南線)",
+                stations: [
+                    { id: "BL08", name: "新埔站", lat: 25.0227, lng: 121.4666 },
+                    { id: "BL07", name: "板橋站", lat: 25.0133, lng: 121.4616 }
+                ]
+            }
+        };
+
+        // 取得 DOM 元素
+        const lineSelect = document.getElementById('line-select');
+        const stationSelect = document.getElementById('station-select');
+        const searchBtn = document.getElementById('search-btn');
+        const statusMessage = document.getElementById('status-message');
+
+        // 1. 頁面載入時，初始化「路線選單」
+        window.addEventListener('DOMContentLoaded', () => {
+            for (const [lineKey, lineData] of Object.entries(mrtData)) {
+                const option = document.createElement('option');
+                option.value = lineKey;
+                option.textContent = lineData.name;
+                lineSelect.appendChild(option);
+            }
+        });
+
+        // 2. 當「路線」改變時，連動更新「車站選單」
+        lineSelect.addEventListener('change', (e) => {
+            const selectedLine = e.target.value;
+            
+            // 清空並重置車站選單
+            stationSelect.innerHTML = '<option value="">-- 請選擇車站 --</option>';
+            searchBtn.disabled = true; // 鎖定搜尋按鈕
+
+            if (selectedLine) {
+                // 解鎖車站選單並填入資料
+                stationSelect.disabled = false;
+                const stations = mrtData[selectedLine].stations;
+                
+                stations.forEach(station => {
+                    const option = document.createElement('option');
+                    // 將座標資料綁在 value 裡面，方便後續丟給 Google API
+                    option.value = JSON.stringify({ lat: station.lat, lng: station.lng, name: station.name });
+                    option.textContent = station.name;
+                    stationSelect.appendChild(option);
+                });
+            } else {
+                stationSelect.disabled = true;
+            }
+        });
+
+        // 3. 當「車站」被選擇時，解鎖「搜尋按鈕」
+        stationSelect.addEventListener('change', (e) => {
+            if (e.target.value) {
+                searchBtn.disabled = false;
+            } else {
+                searchBtn.disabled = true;
+            }
+        });
+
+        // 4. 點擊「搜尋」按鈕的行為 (目前先用 Console.log 模擬)
+        searchBtn.addEventListener('click', () => {
+            // 解析我們剛剛綁在選項裡的座標資料
+            const selectedStationData = JSON.parse(stationSelect.value);
+            
+            // 在畫面上顯示模擬進度
+            statusMessage.classList.remove('hidden');
+            statusMessage.innerHTML = `<span class="animate-pulse">正在搜尋 <b>${selectedStationData.name}</b> 周邊 800m 的餐廳...</span>`;
+            
+            // 打開瀏覽器的開發者工具 (F12) 的 Console 可以看到這筆資料！
+            console.log("【準備呼叫 Google API】");
+            console.log("目標車站:", selectedStationData.name);
+            console.log("搜尋中心座標:", selectedStationData.lat, ",", selectedStationData.lng);
+            console.log("搜尋半徑: 800m");
+        });
+    </script>
+</body>
+</html>
