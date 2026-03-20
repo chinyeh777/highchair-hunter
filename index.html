@@ -10,7 +10,6 @@
 <body class="bg-gray-100 min-h-screen flex flex-col items-center pt-10 px-4 pb-10">
 
     <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md h-fit">
-        
         <div class="text-center mb-6">
             <h1 class="text-2xl font-bold text-gray-800 mb-2">👶 高腳椅獵人 (Highchair Hunter)</h1>
             <p class="text-sm text-gray-500">不再踩雷！尋找捷運站周邊 800m 好去處</p>
@@ -45,7 +44,7 @@
         </div>
     </div>
 
-    <div id="hidden-map" style="display: none;"></div>
+    <div id="map" style="display: none;"></div>
 
     <script>
         const mrtData = {
@@ -73,20 +72,21 @@
         const resultsContainer = document.getElementById('results-container');
         const resultsList = document.getElementById('results-list');
 
-        let placesService; // 用來存放 Google API 服務的變數
+        let map; // 儲存地圖實體
 
-        // 初始化 Google API (當下面那隻 script 載入完成後會自動呼叫這個 function)
-        function initMap() {
-            console.log("Google Maps API 載入成功！");
-            // 建立一個隱藏的地圖實體給 Places API 使用
-            const hiddenMap = new google.maps.Map(document.getElementById('hidden-map'), {
+        // 初始化 API
+        async function initMap() {
+            console.log("Google Maps API (New) 載入成功！");
+            // 新版 API 必須先初始化一個 map 實體
+            const { Map } = await google.maps.importLibrary("maps");
+            map = new Map(document.getElementById("map"), {
                 center: { lat: 25.0361, lng: 121.4526 },
-                zoom: 15
+                zoom: 15,
+                mapId: "DEMO_MAP_ID", // 新版 API 建議要有 mapId
             });
-            placesService = new google.maps.places.PlacesService(hiddenMap);
         }
 
-        // 1 & 2. 選單連動邏輯 (與上版相同)
+        // 選單連動邏輯
         window.addEventListener('DOMContentLoaded', () => {
             for (const [lineKey, lineData] of Object.entries(mrtData)) {
                 const option = document.createElement('option');
@@ -117,37 +117,39 @@
             searchBtn.disabled = !e.target.value;
         });
 
-        // 3. 點擊搜尋，正式呼叫 Google Places API
-        searchBtn.addEventListener('click', () => {
-            if (!placesService) {
-                alert("Google API 還沒載入好，請稍等一下再試。");
-                return;
-            }
-
+        // 核心功能：使用新版 API 搜尋
+        searchBtn.addEventListener('click', async () => {
             const stationData = JSON.parse(stationSelect.value);
-            const searchLocation = new google.maps.LatLng(stationData.lat, stationData.lng);
             
-            // UI 更新：顯示搜尋中
+            // 更新 UI 狀態
             statusMessage.classList.remove('hidden');
-            statusMessage.innerHTML = `<span class="animate-pulse">正在透過 Google 搜尋 <b>${stationData.name}</b> 周圍 800m 的餐廳...</span>`;
+            statusMessage.innerHTML = `<span class="animate-pulse">正在透過 Google (New API) 搜尋 <b>${stationData.name}</b> 周圍 800m 的餐廳...</span>`;
             resultsContainer.classList.add('hidden');
             resultsList.innerHTML = '';
 
-            // 設定搜尋條件
-            const request = {
-                location: searchLocation,
-                radius: '800', // 800公尺
-                type: ['restaurant'] // 只找餐廳
-            };
+            try {
+                // 載入新版 Places 函式庫
+                const { Place } = await google.maps.importLibrary("places");
 
-            // 發送請求給 Google
-            placesService.nearbySearch(request, (results, status) => {
+                // 設定搜尋條件 (新版語法)
+                const request = {
+                    fields: ['displayName', 'rating', 'userRatingCount', 'id'],
+                    locationRestriction: {
+                        center: { lat: stationData.lat, lng: stationData.lng },
+                        radius: 800, // 800公尺
+                    },
+                    includedPrimaryTypes: ['restaurant'],
+                };
+
+                // 發送請求
+                const { places } = await Place.searchNearby(request);
+
                 statusMessage.classList.add('hidden');
 
-                if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-                    // 過濾掉評分太低的，並只取前 10 名，避免畫面太長
-                    const topResults = results
-                        .filter(place => place.rating && place.rating >= 4.0)
+                if (places && places.length > 0) {
+                    // 過濾評分 >= 4.0 且取前 10 名
+                    const topResults = places
+                        .filter(p => p.rating && p.rating >= 4.0)
                         .slice(0, 10);
                     
                     if (topResults.length === 0) {
@@ -158,18 +160,17 @@
 
                     resultsContainer.classList.remove('hidden');
                     
-                    // 把抓到的資料變成網頁上的清單
                     topResults.forEach(place => {
                         const li = document.createElement('li');
                         li.className = 'p-3 bg-orange-50 rounded-lg border border-orange-100 flex justify-between items-center';
                         
-                        // 我們在這邊預留了一個「👶 掃描親子友善度」的按鈕位置 (MVP 第二階段)
+                        // 新版 API 抓取名稱的方式變成 place.displayName.text
                         li.innerHTML = `
                             <div>
-                                <h3 class="font-bold text-gray-800">${place.name}</h3>
-                                <p class="text-xs text-gray-500 mt-1">⭐ ${place.rating} (${place.user_ratings_total} 則評論)</p>
+                                <h3 class="font-bold text-gray-800">${place.displayName.text}</h3>
+                                <p class="text-xs text-gray-500 mt-1">⭐ ${place.rating} (${place.userRatingCount} 則評論)</p>
                             </div>
-                            <button onclick="alert('準備開發：即將掃描這家餐廳的設施與評論是否有高腳椅！')" class="text-xs bg-white border border-orange-300 text-orange-600 py-1 px-2 rounded hover:bg-orange-100">
+                            <button onclick="alert('準備開發：即將掃描這家餐廳的設施與評論是否有高腳椅！')" class="text-xs bg-white border border-orange-300 text-orange-600 py-1 px-2 rounded hover:bg-orange-100 shadow-sm">
                                 👶 掃描
                             </button>
                         `;
@@ -177,14 +178,18 @@
                     });
                 } else {
                     statusMessage.classList.remove('hidden');
-                    statusMessage.innerHTML = '搜尋失敗或周邊沒有餐廳，請換個車站試試看。';
-                    console.error("Google API 錯誤狀態:", status);
+                    statusMessage.innerHTML = '周邊沒有找到餐廳。';
                 }
-            });
+
+            } catch (error) {
+                console.error("搜尋發生錯誤:", error);
+                statusMessage.classList.remove('hidden');
+                statusMessage.innerHTML = '<span class="text-red-500">搜尋失敗，請檢查 Console 報錯。</span>';
+            }
         });
     </script>
 
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuaPi42W0Y4_T3r4bIPfCB7KgcphOYLUY&libraries=places&callback=initMap"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuaPi42W0Y4_T3r4bIPfCB7KgcphOYLUY&v=weekly&callback=initMap"></script>
 
 </body>
 </html>
