@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         select { appearance: auto; }
-        /* 隱藏捲軸但保留捲動功能，讓介面更乾淨 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -18,7 +17,7 @@
         
         <div class="text-center mb-6">
             <h1 class="text-2xl font-bold text-gray-800 mb-2">👶 高腳椅獵人</h1>
-            <p class="text-xs text-gray-500">不再踩雷！尋找捷運站周邊 800m 親子好去處</p>
+            <p class="text-xs text-gray-500">不再踩雷！尋找捷運站周邊 800m 推車友善去處</p>
         </div>
 
         <div class="space-y-4">
@@ -55,9 +54,9 @@
                     </select>
                 </div>
                 <div class="flex items-center">
-                    <input type="checkbox" id="kids-filter" class="w-4 h-4 text-orange-500 rounded border-gray-300 focus:ring-orange-500">
-                    <label for="kids-filter" class="ml-2 text-sm font-medium text-gray-700 cursor-pointer">
-                        只顯示有「👶 親子友善」標記的店家
+                    <input type="checkbox" id="stroller-filter" class="w-4 h-4 text-orange-500 rounded border-gray-300 focus:ring-orange-500">
+                    <label for="stroller-filter" class="ml-2 text-sm font-medium text-gray-700 cursor-pointer">
+                        只顯示有「🦽 推車友善 (無階梯)」的店家
                     </label>
                 </div>
             </div>
@@ -98,7 +97,6 @@
             }
         };
 
-        // DOM 元素
         const lineSelect = document.getElementById('line-select');
         const stationSelect = document.getElementById('station-select');
         const searchBtn = document.getElementById('search-btn');
@@ -106,27 +104,24 @@
         const resultsSection = document.getElementById('results-section');
         const resultsList = document.getElementById('results-list');
         const sortSelect = document.getElementById('sort-select');
-        const kidsFilter = document.getElementById('kids-filter');
+        const strollerFilter = document.getElementById('stroller-filter');
         
-        // 切換按鈕與視圖
         const tabList = document.getElementById('tab-list');
         const tabMap = document.getElementById('tab-map');
         const viewList = document.getElementById('view-list');
         const viewMap = document.getElementById('view-map');
         const mapContainer = document.getElementById('map-container');
 
-        // 全域變數儲存資料，避免重複呼叫 API
         let fetchedPlaces = []; 
         let currentStation = null;
         let map;
         let markers = [];
 
-        // 初始化 Google API
         async function initMap() {
             console.log("Google Maps API 載入準備完成！");
         }
 
-        // 1. 選單連動邏輯
+        // 選單連動邏輯
         window.addEventListener('DOMContentLoaded', () => {
             for (const [lineKey, lineData] of Object.entries(mrtData)) {
                 const option = document.createElement('option');
@@ -156,7 +151,7 @@
             searchBtn.disabled = !e.target.value;
         });
 
-        // 2. 視圖切換邏輯 (清單 vs 地圖)
+        // 視圖切換邏輯
         tabList.addEventListener('click', () => {
             tabList.className = "w-1/2 py-2 text-center text-sm font-bold text-orange-600 border-b-2 border-orange-500";
             tabMap.className = "w-1/2 py-2 text-center text-sm font-medium text-gray-500 hover:text-gray-700 border-b border-transparent";
@@ -170,7 +165,6 @@
             viewMap.classList.remove('hidden');
             viewList.classList.add('hidden');
             
-            // 確保地圖在顯示時正確渲染
             if (!map && currentStation) {
                 const { Map } = await google.maps.importLibrary("maps");
                 map = new Map(mapContainer, {
@@ -182,23 +176,21 @@
             }
         });
 
-        // 3. 搜尋按鈕核心邏輯
+        // 核心搜尋邏輯
         searchBtn.addEventListener('click', async () => {
             currentStation = JSON.parse(stationSelect.value);
-            
-            // UI 更新
             statusMessage.classList.remove('hidden');
             statusMessage.innerHTML = `<span class="animate-pulse">正在搜尋 <b>${currentStation.name}</b> 周圍 800m 的餐廳...</span>`;
             resultsSection.classList.add('hidden');
-            if(map) map = null; // 重置地圖
+            if(map) map = null; 
 
             try {
                 const { Place } = await google.maps.importLibrary("places");
-                const { spherical } = await google.maps.importLibrary("geometry"); // 用來算距離
+                const { spherical } = await google.maps.importLibrary("geometry"); 
 
                 const request = {
-                    // 加入 goodForChildren 與 googleMapsURI 欄位
-                    fields: ['displayName', 'rating', 'userRatingCount', 'id', 'location', 'goodForChildren', 'googleMapsURI'],
+                    // 修改：移除會報錯的 goodForChildren，改為抓取 accessibilityOptions (無障礙選項)
+                    fields: ['displayName', 'rating', 'userRatingCount', 'id', 'location', 'accessibilityOptions', 'googleMapsUri'],
                     locationRestriction: {
                         center: { lat: currentStation.lat, lng: currentStation.lng },
                         radius: 800, 
@@ -209,20 +201,29 @@
                 const { places } = await Place.searchNearby(request);
 
                 if (places && places.length > 0) {
-                    // 計算距離並將資料存入全域變數
                     const stationLatLng = new google.maps.LatLng(currentStation.lat, currentStation.lng);
                     
                     fetchedPlaces = places
-                        .filter(p => p.rating && p.rating >= 3.8) // 放寬一點到 3.8 星
+                        .filter(p => p.rating && p.rating >= 3.8) 
                         .map(p => {
                             const distance = spherical.computeDistanceBetween(stationLatLng, p.location);
+                            
+                            // 判斷是否為推車友善 (有無障礙入口)
+                            let isStrollerFriendly = false;
+                            if (p.accessibilityOptions && p.accessibilityOptions.wheelchairAccessibleEntrance === true) {
+                                isStrollerFriendly = true;
+                            }
+
+                            // 處理備用導航連結
+                            const navUrl = p.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${p.location.lat()},${p.location.lng()}&query_place_id=${p.id}`;
+
                             return {
-                                name: p.displayName.text,
+                                name: p.displayName ? p.displayName.text : '未知餐廳',
                                 rating: p.rating,
                                 reviews: p.userRatingCount,
-                                isKidsFriendly: p.goodForChildren === true,
-                                distance: Math.round(distance), // 四捨五入公尺
-                                url: p.googleMapsURI,
+                                isStrollerFriendly: isStrollerFriendly,
+                                distance: Math.round(distance), 
+                                url: navUrl,
                                 location: p.location
                             };
                         });
@@ -230,53 +231,47 @@
                     statusMessage.classList.add('hidden');
                     resultsSection.classList.remove('hidden');
                     
-                    // 預設切換回清單模式
                     tabList.click();
-                    updateUI(); // 渲染畫面
+                    updateUI(); 
                 } else {
                     statusMessage.innerHTML = '周邊沒有找到合適的餐廳 😢';
                 }
 
             } catch (error) {
                 console.error("API 錯誤:", error);
-                statusMessage.innerHTML = '<span class="text-red-500">搜尋失敗，請確認 API 金鑰是否正確或有額度限制。</span>';
+                statusMessage.innerHTML = `<span class="text-red-500">搜尋失敗，請檢查 Console: ${error.message}</span>`;
             }
         });
 
-        // 4. 排序與篩選觸發
         sortSelect.addEventListener('change', updateUI);
-        kidsFilter.addEventListener('change', updateUI);
+        strollerFilter.addEventListener('change', updateUI);
 
-        // 5. 更新清單與地圖畫面的函數
         function updateUI() {
-            // 步驟 A: 處理篩選
             let displayPlaces = fetchedPlaces;
-            if (kidsFilter.checked) {
-                displayPlaces = displayPlaces.filter(p => p.isKidsFriendly);
+            
+            if (strollerFilter.checked) {
+                displayPlaces = displayPlaces.filter(p => p.isStrollerFriendly);
             }
 
-            // 步驟 B: 處理排序
             const sortMode = sortSelect.value;
             if (sortMode === 'distance') {
-                displayPlaces.sort((a, b) => a.distance - b.distance); // 近到遠
+                displayPlaces.sort((a, b) => a.distance - b.distance); 
             } else if (sortMode === 'rating') {
-                displayPlaces.sort((a, b) => b.rating - a.rating); // 高到低
+                displayPlaces.sort((a, b) => b.rating - a.rating); 
             }
 
-            // 步驟 C: 渲染清單
             resultsList.innerHTML = '';
             if (displayPlaces.length === 0) {
                 resultsList.innerHTML = '<li class="text-center text-gray-500 py-4">沒有符合條件的餐廳。</li>';
             } else {
                 displayPlaces.forEach(place => {
                     const li = document.createElement('li');
-                    // 點擊整張卡片可以直接開 Google Maps
                     li.className = 'p-3 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition cursor-pointer flex justify-between items-start';
                     li.onclick = () => window.open(place.url, '_blank');
                     
-                    const badgeHTML = place.isKidsFriendly 
-                        ? `<span class="inline-block mt-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">✅ 親子友善</span>` 
-                        : `<span class="inline-block mt-1 text-xs text-gray-400">未標記</span>`;
+                    const badgeHTML = place.isStrollerFriendly 
+                        ? `<span class="inline-block mt-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">🦽 推車友善 (無階梯)</span>` 
+                        : `<span class="inline-block mt-1 text-xs text-gray-400">未標記無障礙設施</span>`;
 
                     li.innerHTML = `
                         <div class="w-3/4 pr-2">
@@ -293,15 +288,12 @@
                 });
             }
 
-            // 步驟 D: 如果地圖有打開，同步更新地圖圖釘
             if (map) renderMapMarkers(displayPlaces);
         }
 
-        // 6. 渲染地圖圖釘的函數
         async function renderMapMarkers(placesToRender = fetchedPlaces) {
             const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
             
-            // 清除舊圖釘
             markers.forEach(m => m.map = null);
             markers = [];
 
@@ -312,7 +304,6 @@
                     title: place.name,
                 });
                 
-                // 點擊圖釘跳轉 Google Maps
                 marker.addListener('click', () => {
                     window.open(place.url, '_blank');
                 });
@@ -321,7 +312,7 @@
         }
     </script>
 
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuaPi42W0Y4_T3r4bIPfCB7KgcphOYLUY&v=weekly&libraries=places,geometry,marker&callback=initMap"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBYHMT53Z_gdmseYHxqdIBrlE_4qouMDzM&v=weekly&libraries=places,geometry,marker&callback=initMap"></script>
 
 </body>
 </html>
