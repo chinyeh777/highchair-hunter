@@ -5,50 +5,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>👶 親子友善餐廳雷達</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* 稍微美化一下下拉選單的箭頭 */
-        select { appearance: auto; }
-    </style>
+    <style>select { appearance: auto; }</style>
 </head>
-<body class="bg-gray-100 min-h-screen flex justify-center pt-10 px-4">
+<body class="bg-gray-100 min-h-screen flex flex-col items-center pt-10 px-4 pb-10">
 
     <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md h-fit">
         
         <div class="text-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-800 mb-2">👶 親子友善餐廳雷達</h1>
-            <p class="text-sm text-gray-500">不再踩雷！尋找捷運站周邊 800m 有高腳椅的好去處</p>
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">👶 高腳椅獵人 (Highchair Hunter)</h1>
+            <p class="text-sm text-gray-500">不再踩雷！尋找捷運站周邊 800m 好去處</p>
         </div>
 
         <div class="space-y-4">
-            
             <div>
                 <label for="line-select" class="block text-sm font-medium text-gray-700 mb-1">1. 選擇捷運路線</label>
                 <select id="line-select" class="w-full border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500">
                     <option value="">-- 請選擇路線 --</option>
-                    </select>
+                </select>
             </div>
 
             <div>
                 <label for="station-select" class="block text-sm font-medium text-gray-700 mb-1">2. 選擇捷運站</label>
                 <select id="station-select" class="w-full border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500" disabled>
                     <option value="">-- 請先選擇路線 --</option>
-                    </select>
+                </select>
             </div>
 
             <button id="search-btn" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 mt-4 shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
                 🔍 尋找周邊餐廳
             </button>
-
         </div>
 
-        <div id="status-message" class="mt-6 text-center text-sm text-gray-600 hidden">
-            </div>
-
+        <div id="status-message" class="mt-4 text-center text-sm text-gray-600 hidden"></div>
+        
+        <div id="results-container" class="mt-6 hidden">
+            <h2 class="text-lg font-bold text-gray-800 border-b pb-2 mb-3">搜尋結果 (Top 10)</h2>
+            <ul id="results-list" class="space-y-3">
+                </ul>
+        </div>
     </div>
 
+    <div id="hidden-map" style="display: none;"></div>
+
     <script>
-        // 【PM 準備的測試資料庫】
-        // 我們先放入中和新蘆線（新莊段）和板南線作為測試，確認選單連動邏輯。
         const mrtData = {
             "O_line": { 
                 name: "橘線 (中和新蘆線)",
@@ -67,13 +66,27 @@
             }
         };
 
-        // 取得 DOM 元素
         const lineSelect = document.getElementById('line-select');
         const stationSelect = document.getElementById('station-select');
         const searchBtn = document.getElementById('search-btn');
         const statusMessage = document.getElementById('status-message');
+        const resultsContainer = document.getElementById('results-container');
+        const resultsList = document.getElementById('results-list');
 
-        // 1. 頁面載入時，初始化「路線選單」
+        let placesService; // 用來存放 Google API 服務的變數
+
+        // 初始化 Google API (當下面那隻 script 載入完成後會自動呼叫這個 function)
+        function initMap() {
+            console.log("Google Maps API 載入成功！");
+            // 建立一個隱藏的地圖實體給 Places API 使用
+            const hiddenMap = new google.maps.Map(document.getElementById('hidden-map'), {
+                center: { lat: 25.0361, lng: 121.4526 },
+                zoom: 15
+            });
+            placesService = new google.maps.places.PlacesService(hiddenMap);
+        }
+
+        // 1 & 2. 選單連動邏輯 (與上版相同)
         window.addEventListener('DOMContentLoaded', () => {
             for (const [lineKey, lineData] of Object.entries(mrtData)) {
                 const option = document.createElement('option');
@@ -83,22 +96,14 @@
             }
         });
 
-        // 2. 當「路線」改變時，連動更新「車站選單」
         lineSelect.addEventListener('change', (e) => {
             const selectedLine = e.target.value;
-            
-            // 清空並重置車站選單
             stationSelect.innerHTML = '<option value="">-- 請選擇車站 --</option>';
-            searchBtn.disabled = true; // 鎖定搜尋按鈕
-
+            searchBtn.disabled = true;
             if (selectedLine) {
-                // 解鎖車站選單並填入資料
                 stationSelect.disabled = false;
-                const stations = mrtData[selectedLine].stations;
-                
-                stations.forEach(station => {
+                mrtData[selectedLine].stations.forEach(station => {
                     const option = document.createElement('option');
-                    // 將座標資料綁在 value 裡面，方便後續丟給 Google API
                     option.value = JSON.stringify({ lat: station.lat, lng: station.lng, name: station.name });
                     option.textContent = station.name;
                     stationSelect.appendChild(option);
@@ -108,30 +113,78 @@
             }
         });
 
-        // 3. 當「車站」被選擇時，解鎖「搜尋按鈕」
         stationSelect.addEventListener('change', (e) => {
-            if (e.target.value) {
-                searchBtn.disabled = false;
-            } else {
-                searchBtn.disabled = true;
-            }
+            searchBtn.disabled = !e.target.value;
         });
 
-        // 4. 點擊「搜尋」按鈕的行為 (目前先用 Console.log 模擬)
+        // 3. 點擊搜尋，正式呼叫 Google Places API
         searchBtn.addEventListener('click', () => {
-            // 解析我們剛剛綁在選項裡的座標資料
-            const selectedStationData = JSON.parse(stationSelect.value);
+            if (!placesService) {
+                alert("Google API 還沒載入好，請稍等一下再試。");
+                return;
+            }
+
+            const stationData = JSON.parse(stationSelect.value);
+            const searchLocation = new google.maps.LatLng(stationData.lat, stationData.lng);
             
-            // 在畫面上顯示模擬進度
+            // UI 更新：顯示搜尋中
             statusMessage.classList.remove('hidden');
-            statusMessage.innerHTML = `<span class="animate-pulse">正在搜尋 <b>${selectedStationData.name}</b> 周邊 800m 的餐廳...</span>`;
-            
-            // 打開瀏覽器的開發者工具 (F12) 的 Console 可以看到這筆資料！
-            console.log("【準備呼叫 Google API】");
-            console.log("目標車站:", selectedStationData.name);
-            console.log("搜尋中心座標:", selectedStationData.lat, ",", selectedStationData.lng);
-            console.log("搜尋半徑: 800m");
+            statusMessage.innerHTML = `<span class="animate-pulse">正在透過 Google 搜尋 <b>${stationData.name}</b> 周圍 800m 的餐廳...</span>`;
+            resultsContainer.classList.add('hidden');
+            resultsList.innerHTML = '';
+
+            // 設定搜尋條件
+            const request = {
+                location: searchLocation,
+                radius: '800', // 800公尺
+                type: ['restaurant'] // 只找餐廳
+            };
+
+            // 發送請求給 Google
+            placesService.nearbySearch(request, (results, status) => {
+                statusMessage.classList.add('hidden');
+
+                if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+                    // 過濾掉評分太低的，並只取前 10 名，避免畫面太長
+                    const topResults = results
+                        .filter(place => place.rating && place.rating >= 4.0)
+                        .slice(0, 10);
+                    
+                    if (topResults.length === 0) {
+                        statusMessage.classList.remove('hidden');
+                        statusMessage.innerHTML = '周邊沒有找到評分 4.0 以上的餐廳 😢';
+                        return;
+                    }
+
+                    resultsContainer.classList.remove('hidden');
+                    
+                    // 把抓到的資料變成網頁上的清單
+                    topResults.forEach(place => {
+                        const li = document.createElement('li');
+                        li.className = 'p-3 bg-orange-50 rounded-lg border border-orange-100 flex justify-between items-center';
+                        
+                        // 我們在這邊預留了一個「👶 掃描親子友善度」的按鈕位置 (MVP 第二階段)
+                        li.innerHTML = `
+                            <div>
+                                <h3 class="font-bold text-gray-800">${place.name}</h3>
+                                <p class="text-xs text-gray-500 mt-1">⭐ ${place.rating} (${place.user_ratings_total} 則評論)</p>
+                            </div>
+                            <button onclick="alert('準備開發：即將掃描這家餐廳的設施與評論是否有高腳椅！')" class="text-xs bg-white border border-orange-300 text-orange-600 py-1 px-2 rounded hover:bg-orange-100">
+                                👶 掃描
+                            </button>
+                        `;
+                        resultsList.appendChild(li);
+                    });
+                } else {
+                    statusMessage.classList.remove('hidden');
+                    statusMessage.innerHTML = '搜尋失敗或周邊沒有餐廳，請換個車站試試看。';
+                    console.error("Google API 錯誤狀態:", status);
+                }
+            });
         });
     </script>
+
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuaPi42W0Y4_T3r4bIPfCB7KgcphOYLUY&libraries=places&callback=initMap"></script>
+
 </body>
 </html>
