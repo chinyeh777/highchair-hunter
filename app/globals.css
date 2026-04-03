@@ -1,0 +1,137 @@
+/* app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+:root {
+  /* Warm, inviting palette — feels safe for parents */
+  --color-cream: #FDF8F2;
+  --color-amber-50: #FFF8ED;
+  --color-amber-100: #FFECC8;
+  --color-amber-400: #F5A623;
+  --color-amber-500: #E8941A;
+  --color-terracotta: #D4603A;
+  --color-terracotta-dark: #B84D2A;
+  --color-sage: #5A7A5C;
+  --color-sage-light: #EBF2EB;
+  --color-slate-800: #1E293B;
+  --color-slate-600: #475569;
+  --color-slate-400: #94A3B8;
+  --color-slate-100: #F1F5F9;
+
+  --font-display: 'Nunito', sans-serif;
+  --font-body: 'Noto Sans TC', sans-serif;
+
+  --shadow-card: 0 2px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-card-hover: 0 8px 24px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06);
+  --radius-card: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  background-color: var(--color-cream);
+  font-family: var(--font-body);
+  color: var(--color-slate-800);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-amber-100); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-amber-400); }
+
+/* Utility classes */
+.font-display { font-family: var(--font-display); }
+.card {
+  background: white;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+}
+
+/* Rating stars */
+.star-filled { color: var(--color-amber-400); }
+.star-empty { color: var(--color-slate-400); }
+
+/* Badge variants */
+.badge-green {
+  background: var(--color-sage-light);
+  color: var(--color-sage);
+  font-weight: 700;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.badge-amber {
+  background: var(--color-amber-50);
+  color: var(--color-amber-500);
+  font-weight: 700;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.badge-grey {
+  background: var(--color-slate-100);
+  color: var(--color-slate-600);
+  font-weight: 600;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.3s ease forwards;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* Button base */
+.btn-primary {
+  background: var(--color-terracotta);
+  color: white;
+  font-family: var(--font-display);
+  font-weight: 800;
+  border-radius: 12px;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-primary:hover { background: var(--color-terracotta-dark); }
+.btn-primary:active { transform: scale(0.97); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
