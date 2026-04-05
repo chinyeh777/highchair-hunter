@@ -163,7 +163,7 @@ export const STATION_MAP = new Map<string, MrtStation>(
 // 將車站依照「中文完整路線名稱」分組，讓下拉選單更易讀
 export const STATIONS_BY_LINE = MRT_STATIONS.reduce<Record<string, MrtStation[]>>(
   (acc, station) => {
-    let lineName = station.line;
+    let lineName: string = station.line;
     switch (station.line) {
       case 'BL': lineName = '藍線 (板南線)'; break;
       case 'O':  lineName = '橘線 (中和新蘆線)'; break;
