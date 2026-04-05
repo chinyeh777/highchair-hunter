@@ -1,1 +1,15 @@
-node_modules
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+/build
+
+# env files (最重要！絕對禁止上傳金鑰)
+.env*.local
+.env
+
+# misc
+.DS_Store
+*.pem

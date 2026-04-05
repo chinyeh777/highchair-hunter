@@ -3,7 +3,10 @@
 
 import React from 'react';
 import type { Restaurant } from '@/lib/types';
-import { formatDistance, walkingMinutes, priceLevelLabel, buildGoogleMapsNavUrl } from '@/lib/utils';
+import { formatDistance, walkingMinutes, priceLevelLabel, buildPhotoUrl } from '@/lib/utils';
+
+// NEXT_PUBLIC_ key is safe to use in the browser
+const PUBLIC_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 
 interface Props {
   restaurant: Restaurant;
@@ -28,6 +31,46 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
+// Resolves a photoName (raw path or ref: prefix) into a full URL using the public key
+function resolvePhotoUrl(photoName: string): string {
+  if (!photoName || !PUBLIC_MAPS_KEY) return '';
+
+  // Old Places API fallback: "ref:PHOTO_REFERENCE"
+  if (photoName.startsWith('ref:')) {
+    const ref = photoName.slice(4);
+    return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${ref}&key=${PUBLIC_MAPS_KEY}`;
+  }
+
+  // New Places API: any path string (e.g. "places/xxx/photos/yyy")
+  // Strip leading slash if present to avoid double-slash in URL
+  const cleanPath = photoName.startsWith('/') ? photoName.slice(1) : photoName;
+  return `https://places.googleapis.com/v1/${cleanPath}/media?maxHeightPx=400&maxWidthPx=400&key=${PUBLIC_MAPS_KEY}`;
+}
+
+function RestaurantPhoto({ photoName, name }: { photoName?: string; name: string }) {
+  const [failed, setFailed] = React.useState(false);
+
+  const url = photoName ? resolvePhotoUrl(photoName) : '';
+
+  if (!url || failed) {
+    return (
+      <div className="w-14 h-14 rounded-xl flex-shrink-0 bg-amber-50 flex items-center justify-center border border-amber-100">
+        <span className="text-2xl">🍽️</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={url}
+      alt={name}
+      className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function HighchairBadge({ hasHighchair, isChildFriendly }: { hasHighchair: boolean | null; isChildFriendly: boolean | null }) {
   if (hasHighchair === true) {
     return <span className="badge-green">🪑 確認有高腳椅</span>;
@@ -45,7 +88,7 @@ export default function RestaurantCard({ restaurant, isSelected, onClick, rank }
   const {
     name, rating, reviewCount, address, distanceMeters,
     hasHighchair, isChildFriendly, priceLevel, openNow,
-    photos, googleMapsUrl, primaryType, placeId
+    photoNames, googleMapsUrl, primaryType, placeId
   } = restaurant;
 
   const walkMin = walkingMinutes(distanceMeters);
@@ -72,14 +115,7 @@ export default function RestaurantCard({ restaurant, isSelected, onClick, rank }
             <h3 className="font-display font-black text-slate-800 text-sm leading-tight line-clamp-2">
               {name}
             </h3>
-            {photos[0] && (
-              <img
-                src={photos[0]}
-                alt={name}
-                className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
-                loading="lazy"
-              />
-            )}
+            <RestaurantPhoto photoName={photoNames[0]} name={name} />
           </div>
 
           {/* Badges row */}

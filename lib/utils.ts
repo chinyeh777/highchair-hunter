@@ -49,7 +49,7 @@ export function priceLevelLabel(level: number | null): string {
 export function normalizePlaceResult(
   raw: Record<string, unknown>,
   stationLat: number,
-  stationLng: number
+  stationLng: number,
 ): Restaurant | null {
   // placeId and name are mandatory — reject if missing
   const placeId = safeString(raw.id ?? raw.place_id);
@@ -76,7 +76,7 @@ export function normalizePlaceResult(
       raw.goodForChildren ?? raw.good_for_children
     ),
     hasHighchair: null, // Phase 2: SerpApi
-    photos: parsePhotos(raw.photos),
+    photoNames: parsePhotosNames(raw.photos),
     googleMapsUrl: buildGoogleMapsNavUrl(placeId, name),
     distanceMeters: location
       ? Math.round(haversineMeters(stationLat, stationLng, location.lat, location.lng))
@@ -142,19 +142,30 @@ function parseLocation(loc: unknown): { lat: number; lng: number } {
   return { lat: 0, lng: 0 };
 }
 
-function parsePhotos(photos: unknown): string[] {
+// parsePhotosNames: 組合完整的 Google Places Photo Media URL
+// 在 server-side (API Route) 呼叫，apiKey 來自 process.env
+// ── Google Places photo URL (assembled client-side with public key) ──
+// Keeps server-side API key out of the browser.
+// Call this in components, passing process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY.
+export function buildPhotoUrl(photoName: string, apiKey: string): string {
+  if (!photoName || !apiKey) return '';
+  return `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=400&maxWidthPx=400&key=${apiKey}`;
+}
+
+function parsePhotosNames(photos: unknown): string[] {
   if (!Array.isArray(photos)) return [];
   return photos
     .slice(0, 3)
     .map((p: unknown) => {
       const photo = p as Record<string, unknown>;
-      // New API: photo.name is like "places/xxx/photos/yyy"
-      if (typeof photo.name === 'string') {
-        return `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=400&maxWidthPx=400`;
+      // Places API (New): { name: "places/xxx/photos/yyy", ... }
+      // Accept any non-empty string in the name field — the API format can vary
+      if (typeof photo.name === 'string' && photo.name.length > 0) {
+        return photo.name;
       }
-      // Old API: photo_reference
+      // Old Places API fallback: store photo_reference prefixed so client can detect
       if (typeof photo.photo_reference === 'string') {
-        return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${photo.photo_reference}`;
+        return `ref:${photo.photo_reference}`;
       }
       return '';
     })

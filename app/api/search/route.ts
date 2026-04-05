@@ -81,6 +81,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<SearchApiRespo
       body: JSON.stringify({
         includedTypes: ['restaurant', 'cafe', 'meal_takeaway', 'bakery'],
         maxResultCount: 20,
+        languageCode: 'zh-TW', // 👉 必殺技：直接在 Body 強制指定繁體中文
         rankPreference: 'POPULARITY',
         locationRestriction: {
           circle: {

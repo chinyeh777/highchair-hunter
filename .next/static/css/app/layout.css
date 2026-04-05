@@ -435,9 +435,6 @@ video {
 [hidden]:where(:not([hidden="until-found"])) {
   display: none;
 }
-.visible {
-  visibility: visible;
-}
 .absolute {
   position: absolute;
 }
@@ -504,9 +501,6 @@ video {
 .mt-3 {
   margin-top: 0.75rem;
 }
-.mt-auto {
-  margin-top: auto;
-}
 .mt-6 {
   margin-top: 1.5rem;
 }
@@ -552,11 +546,11 @@ video {
 .h-7 {
   height: 1.75rem;
 }
-.h-full {
-  height: 100%;
-}
 .h-\[calc\(100vh-57px\)\] {
   height: calc(100vh - 57px);
+}
+.h-full {
+  height: 100%;
 }
 .min-h-screen {
   min-height: 100vh;
@@ -593,9 +587,6 @@ video {
 }
 .w-7 {
   width: 1.75rem;
-}
-.w-80 {
-  width: 20rem;
 }
 .w-full {
   width: 100%;
@@ -722,10 +713,6 @@ video {
 }
 .border-2 {
   border-width: 2px;
-}
-.border-x {
-  border-left-width: 1px;
-  border-right-width: 1px;
 }
 .border-b {
   border-bottom-width: 1px;
