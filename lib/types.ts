@@ -57,7 +57,7 @@ export interface Restaurant {
   priceLevel: number | null;   // null = unknown, 0–4
   isChildFriendly: boolean | null;    // null = API didn't return
   hasHighchair: boolean | null;       // null = unverified (Phase 2: SerpApi)
-  photos: string[];            // URLs array, may be empty []
+  photoNames?: string[];         // URLs array, may be empty []
   googleMapsUrl: string;       // always a valid URL
   distanceMeters: number;      // distance from searched station
   primaryType: string;         // e.g. "restaurant", "cafe"
