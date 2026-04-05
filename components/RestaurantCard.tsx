@@ -115,7 +115,7 @@ export default function RestaurantCard({ restaurant, isSelected, onClick, rank }
             <h3 className="font-display font-black text-slate-800 text-sm leading-tight line-clamp-2">
               {name}
             </h3>
-            <RestaurantPhoto photoName={photoNames[0]} name={name} />
+            <RestaurantPhoto photoName={photoNames?.[0]} name={name} />
           </div>
 
           {/* Badges row */}
